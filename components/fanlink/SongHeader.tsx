@@ -152,6 +152,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           sizes="(max-width: 640px) 95vw, 600px"
           className="object-cover transition-all duration-500"
           priority
+          unoptimized
           // quality={95}
         />
 
