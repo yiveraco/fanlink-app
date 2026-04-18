@@ -1,0 +1,16 @@
+services:
+  fanlink:
+    container_name: yivera-fanlink
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    ports:
+      - "127.0.0.1:3300:3000"
+    restart: unless-stopped
+    networks:
+      - yivera-network
+
+networks:
+  yivera-network:
+    external: true
