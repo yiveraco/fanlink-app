@@ -1,6 +1,6 @@
 // hooks/useFanlink.ts
 import { useQuery } from "@tanstack/react-query";
-import { getReleaseAndTracksByUpc } from "@/api/fanlink";
+import { getReleaseAndTracksByUpc, getReleaseBySlug } from "@/api/fanlink";
 import { ReleaseAndTracksResponse } from "@/types/fanlink";
 
 // ============================================
@@ -30,6 +30,24 @@ export function useReleaseByUpc(upc: string | null | undefined) {
     queryFn: () => getReleaseAndTracksByUpc(upc!),
     enabled: !!upc,
     staleTime: 5 * 60 * 1000, // 5 minutes — release data rarely changes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 2,
+  });
+}
+
+/**
+ * Fetch a release and its tracks by slug.
+ * Only runs when a non-empty slug is provided.
+ *
+ * @example
+ * const { data, isLoading, isError } = useReleaseBySlug("reflection-iba-philipiano");
+ */
+export function useReleaseBySlug(slug: string | null | undefined) {
+  return useQuery<ReleaseAndTracksResponse, Error>({
+    queryKey: fanlinkKeys.release(slug ?? ""),
+    queryFn: () => getReleaseBySlug(slug!),
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
   });

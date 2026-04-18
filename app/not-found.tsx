@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="relative w-full min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6 overflow-hidden">
+    <div className="relative w-full min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-between px-6 overflow-hidden">
       {/* Animated background matching fanlink design */}
       <div className="fixed inset-0 w-full h-full">
         {/* Base gradient */}
@@ -27,7 +28,7 @@ export default function NotFound() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 text-center max-w-2xl mx-auto space-y-6">
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 text-center max-w-2xl mx-auto space-y-6 py-12">
         {/* Storyset Illustration */}
         <div className="flex justify-center mb-8">
           <Image
@@ -42,10 +43,10 @@ export default function NotFound() {
 
         {/* Error Message */}
         <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
-          Fanlink Not Found
+          Release Not Found
         </h2>
         <p className="text-lg text-gray-300 mb-8 leading-relaxed">
-          The fanlink you&apos;re looking for doesn&apos;t exist or may have
+          The release you&apos;re looking for doesn&apos;t exist or may have
           been removed.
         </p>
 
@@ -57,6 +58,27 @@ export default function NotFound() {
           </p>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 pb-6 sm:pb-8">
+        <Link
+          href="https://www.yivera.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 sm:gap-3 opacity-70 hover:opacity-100 transition-opacity duration-300"
+        >
+          <Image
+            src="/logo.png"
+            alt="Yivera Disto"
+            width={35}
+            height={32}
+            className="object-contain"
+          />
+          <p className="font-work-sans text-white/70 text-sm sm:text-base tracking-wide whitespace-nowrap">
+            Powered by Yivera Disto
+          </p>
+        </Link>
+      </footer>
     </div>
   );
 }

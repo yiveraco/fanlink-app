@@ -12,6 +12,7 @@ const apiClient = axios.create({
 // REQUEST INTERCEPTOR
 apiClient.interceptors.request.use(
   (config) => {
+    console.log("[axios] headers:", config.headers);
     // Handle FormData — let the browser set the correct Content-Type boundary
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];

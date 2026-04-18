@@ -26,7 +26,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setAudioError(false);
-      console.log("Audio duration loaded:", audio.duration);
     };
 
     const handleEnded = () => {
@@ -38,13 +37,11 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
     const handleError = () => {
       setAudioError(true);
       setIsPlaying(false);
-      console.error("Audio failed to load. Please check the audio source.");
     };
 
     const handleCanPlay = () => {
       if (audio.duration && duration === 0) {
         setDuration(audio.duration);
-        console.log("Duration set on canplay:", audio.duration);
       }
     };
 
@@ -53,7 +50,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
-    // Try to set duration immediately if already loaded
     if (audio.duration && !isNaN(audio.duration)) {
       setDuration(audio.duration);
     }
@@ -63,9 +59,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [duration]);
 
@@ -73,8 +67,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
     const updateProgress = () => {
       const audio = audioRef.current;
       if (audio && audio.duration) {
-        const progressPercent = (audio.currentTime / audio.duration) * 100;
-        setProgress(progressPercent);
+        setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(audio.currentTime);
       }
       if (isPlaying) {
@@ -87,9 +80,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
     }
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [isPlaying]);
 
@@ -143,7 +134,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
         Your browser does not support the audio element.
       </audio>
 
-      {/* Album/Song Artwork with Play Button Overlay */}
+      {/* Artwork */}
       <div className="relative w-full aspect-square max-w-full sm:max-w-[600px] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl group">
         <Image
           src={coverImage}
@@ -153,25 +144,31 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           className="object-cover transition-all duration-500"
           priority
           unoptimized
-          // quality={95}
         />
 
-        {/* Darkened overlay when playing */}
+        {/* Overlay — always slightly visible so the button reads against the art */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
-            isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          className={`absolute inset-0 transition-all duration-300 ${
+            isPlaying ? "bg-black/50" : "bg-black/20 group-hover:bg-black/40"
           }`}
         />
 
-        {/* Central Play/Pause Button */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        {/* Play / Pause button — ALWAYS visible, enhances on hover/playing */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <Button
             onClick={togglePlayPause}
             size="icon"
             disabled={audioError}
-            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 hover:bg-white hover:scale-110 transition-all duration-300 shadow-2xl ${
-              isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            } ${audioError ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`
+              w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-2xl
+              transition-all duration-300
+              ${audioError ? "opacity-40 cursor-not-allowed" : ""}
+              ${
+                isPlaying
+                  ? "bg-white hover:bg-white scale-110"
+                  : "bg-white/80 hover:bg-white group-hover:scale-110 scale-100"
+              }
+            `}
           >
             {isPlaying ? (
               <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-black fill-black" />
@@ -179,9 +176,16 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
               <Play className="w-8 h-8 sm:w-10 sm:h-10 text-black fill-black ml-1" />
             )}
           </Button>
+
+          {/* Preview hint — visible at rest, fades out while playing */}
+          {!isPlaying && !audioError && (
+            <span className="text-white/80 text-xs font-work-sans tracking-widest uppercase select-none drop-shadow">
+              Preview
+            </span>
+          )}
         </div>
 
-        {/* Audio Waveform Visualization - Bottom of image */}
+        {/* Progress bar at bottom of artwork */}
         {isPlaying && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
             <div
@@ -191,7 +195,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           </div>
         )}
 
-        {/* Subtle pulse animation around the edges when playing */}
+        {/* Pulse border when playing */}
         {isPlaying && (
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute inset-0 border-2 border-white/30 rounded-xl sm:rounded-2xl animate-pulse" />
@@ -199,8 +203,9 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
         )}
       </div>
 
-      {/* Title and Artist with Elegant Now Playing Indicator */}
+      {/* Title + Artist */}
       <div className="flex flex-col items-center gap-1 sm:gap-2 animate-slide-up relative">
+        {/* Sound wave indicator — shows while playing */}
         {isPlaying && (
           <div className="absolute -left-12 sm:-left-16 top-1/2 -translate-y-1/2 flex items-end gap-1">
             <div className="w-1 bg-linear-to-t from-white/90 to-white/60 rounded-full animate-sound-wave-1 shadow-sm" />
@@ -218,7 +223,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
         </p>
       </div>
 
-      {/* Enhanced Progress Bar with Glow Effect */}
+      {/* Progress bar + timestamps — shown below title when playing */}
       {isPlaying && (
         <div className="w-full max-w-md flex flex-col gap-3 animate-fade-in">
           <div className="flex justify-between text-xs text-white/50 font-work-sans font-medium">
@@ -232,22 +237,18 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
             onClick={handleSeek}
             className="relative h-2 bg-white/10 rounded-full cursor-pointer overflow-visible backdrop-blur-sm group/progress"
           >
-            {/* Glow effect background */}
             <div
               className="absolute inset-0 bg-white/5 blur-sm rounded-full"
               style={{ width: `${progress}%` }}
             />
-            {/* Progress fill with enhanced gradient */}
             <div
               className="absolute inset-0 bg-linear-to-r from-white via-white/95 to-white/90 rounded-full transition-all duration-100 ease-linear shadow-lg"
               style={{ width: `${progress}%` }}
             />
-            {/* Moving shine effect */}
             <div
-              className="absolute inset-y-0 left-0 w-16 bg-linear-to-r from-transparent via-white/40 to-transparent animate-shimmer rounded-full"
+              className="absolute inset-y-0 w-16 bg-linear-to-r from-transparent via-white/40 to-transparent animate-shimmer rounded-full"
               style={{ left: `${Math.max(0, progress - 8)}%` }}
             />
-            {/* Playhead indicator */}
             <div
               className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-white/50 opacity-0 group-hover/progress:opacity-100 transition-opacity"
               style={{

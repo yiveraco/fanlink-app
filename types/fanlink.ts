@@ -1,10 +1,5 @@
 // types/fanlink.ts
 
-// ============================================
-// ARTIST PROFILE
-// Fields match the real API response exactly.
-// ============================================
-
 export interface ArtistProfile {
   id: string;
   businessId?: string;
@@ -23,7 +18,6 @@ export interface ArtistProfile {
   state: string | null;
   postCode: string | null;
   country: string | null;
-  // Streaming / social links
   appleMusic: string | null;
   facebook: string | null;
   soundCloud: string | null;
@@ -45,11 +39,6 @@ export interface ArtistProfile {
   labelId?: string | null;
 }
 
-// ============================================
-// TRACK ARTIST
-// Note: `artist` can be null for non-primary roles (Composer, Remixer, etc.)
-// ============================================
-
 export interface TrackArtist {
   id: number;
   name: string | null;
@@ -69,14 +58,10 @@ export interface ReleaseArtist {
   bio: string | null;
 }
 
-// ============================================
-// TRACK
-// ============================================
-
 export interface Track {
   id: string;
   wav: string;
-  mp3?: string; // Present in newer records
+  mp3?: string;
   shortWav?: string | null;
   trackTitle: string;
   mixName: string | null;
@@ -105,15 +90,10 @@ export interface Track {
   updatedAt: string;
   releaseId: string;
   artists: TrackArtist[];
-  // Optional fields present in newer API versions
   peakData?: string | null;
   songWriter?: string | null;
   trackAiGenerated?: string | null;
 }
-
-// ============================================
-// RELEASE
-// ============================================
 
 export type ReleaseType = "SINGLE" | "EP" | "ALBUM";
 export type ReleaseStatus =
@@ -126,6 +106,7 @@ export type ReleaseStatus =
 
 export interface Release {
   id: string;
+  slug?: string | null;
   releaseTitle: string;
   releaseType: ReleaseType;
   releaseDate: string;
@@ -135,13 +116,26 @@ export interface Release {
   mood: string | null;
   upc: string;
   status: ReleaseStatus;
+  // Legacy single fanLink field (kept for backward compat)
   fanLink: string | null;
   artists: ReleaseArtist[];
+  // Per-platform streaming URLs — populated by the updated backend
+  spotifyUrl: string | null;
+  appleMusicUrl: string | null;
+  itunesUrl: string | null;
+  youtubeUrl: string | null;
+  youtubeMusicUrl: string | null;
+  amazonMusicUrl: string | null;
+  amazonUrl: string | null;
+  deezerUrl: string | null;
+  tidalUrl: string | null;
+  boomplayUrl: string | null;
+  pandoraUrl: string | null;
+  soundcloudUrl: string | null;
+  bandcampUrl: string | null;
+  jaxstaUrl: string | null;
+  junoUrl: string | null;
 }
-
-// ============================================
-// API RESPONSE
-// ============================================
 
 export interface ReleaseAndTracksData {
   release: Release;
