@@ -1,13 +1,15 @@
 "use client";
 // components/fanlink/FanlinkClient.tsx
 
-import { JSX } from "react";
+import { JSX, useState } from "react";
 import Image from "next/image";
 import { Release, Track, ArtistProfile } from "@/types/fanlink";
 import { SocialLink, StreamingService } from "@/types";
 import { SongHeader } from "./SongHeader";
 import { StreamingServices } from "./StreamingLinks";
 import { Footer } from "./Footer";
+import { ShareButton } from "./ShareButton";
+import { ShareModal } from "./ShareModal";
 
 // ============================================
 // STREAMING PLATFORMS
@@ -251,6 +253,8 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
 
   const streamingServices = buildStreamingServices(release);
   const socialLinks = buildSocialLinks(profile);
+  const [shareOpen, setShareOpen] = useState(false);
+  const slug = release.slug ?? release.id; // fanlink slug for the share URL
 
   return (
     <div className="relative w-full min-h-screen overflow-x-hidden bg-[#0a0a0a]">
@@ -291,6 +295,17 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
 
         <Footer artistName={artistName} socialLinks={socialLinks} />
       </main>
+
+      <ShareButton onClick={() => setShareOpen(true)} />
+
+      <ShareModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        releaseTitle={release.releaseTitle}
+        artistName={artistName}
+        coverArt={release.coverArt}
+        slug={slug}
+      />
     </div>
   );
 }
