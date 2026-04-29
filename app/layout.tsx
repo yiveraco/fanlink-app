@@ -52,8 +52,8 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    site: "@YiveraDisto",
-    creator: "@YiveraDisto",
+    site: "@YiveraDistro",
+    creator: "@YiveraDistro",
     title: "Yivera Play — Stream Music",
     description: "Stream music from independent artists distributed by Yivera.",
     images: [`${BASE_URL}/icon4.png`],

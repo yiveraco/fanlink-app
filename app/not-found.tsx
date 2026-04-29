@@ -69,13 +69,13 @@ export default function NotFound() {
         >
           <Image
             src="/logo.png"
-            alt="Yivera Disto"
+            alt="Yivera Distro"
             width={35}
             height={32}
             className="object-contain"
           />
           <p className="font-work-sans text-white/70 text-sm sm:text-base tracking-wide whitespace-nowrap">
-            Powered by Yivera Disto
+            Powered by Yivera Distro
           </p>
         </Link>
       </footer>

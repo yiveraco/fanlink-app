@@ -177,8 +177,8 @@ export async function generateMetadata({
       title,
       description,
       images: [coverArt],
-      site: "@YiveraDisto",
-      creator: "@YiveraDisto",
+      site: "@YiveraDistro",
+      creator: "@YiveraDistro",
     },
 
     robots: {
