@@ -1,15 +1,26 @@
 "use client";
+// components/fanlink/SongHeader.tsx
+
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Pause, Play } from "lucide-react";
 import { SongHeaderProps } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 
-export const SongHeader: React.FC<SongHeaderProps> = ({
+// Extended props to carry release context for analytics
+interface ExtendedSongHeaderProps extends SongHeaderProps {
+  releaseSlug?: string;
+  artistName?: string;
+}
+
+export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
   title,
   artist,
   coverImage,
   audioSnippetUrl,
+  releaseSlug,
+  artistName,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -18,6 +29,13 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
   const [audioError, setAudioError] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
+
+  // Shared event dimensions
+  const eventDimensions = {
+    release_title: title,
+    artist_name: artistName ?? artist,
+    release_slug: releaseSlug,
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -92,9 +110,11 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
       if (isPlaying) {
         audio.pause();
         setIsPlaying(false);
+        trackEvent("audio_preview_pause", eventDimensions);
       } else {
         await audio.play();
         setIsPlaying(true);
+        trackEvent("audio_preview_play", eventDimensions);
       }
     } catch (error) {
       console.error("Audio playback error:", error);
@@ -146,14 +166,12 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           unoptimized
         />
 
-        {/* Overlay — always slightly visible so the button reads against the art */}
         <div
           className={`absolute inset-0 transition-all duration-300 ${
             isPlaying ? "bg-black/50" : "bg-black/20 group-hover:bg-black/40"
           }`}
         />
 
-        {/* Play / Pause button — ALWAYS visible, enhances on hover/playing */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <Button
             onClick={togglePlayPause}
@@ -177,7 +195,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
             )}
           </Button>
 
-          {/* Preview hint — visible at rest, fades out while playing */}
           {!isPlaying && !audioError && (
             <span className="text-white/80 text-xs font-work-sans tracking-widest uppercase select-none drop-shadow">
               Preview
@@ -185,7 +202,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           )}
         </div>
 
-        {/* Progress bar at bottom of artwork */}
         {isPlaying && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
             <div
@@ -195,7 +211,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
           </div>
         )}
 
-        {/* Pulse border when playing */}
         {isPlaying && (
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute inset-0 border-2 border-white/30 rounded-xl sm:rounded-2xl animate-pulse" />
@@ -205,7 +220,6 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
 
       {/* Title + Artist */}
       <div className="flex flex-col items-center gap-1 sm:gap-2 animate-slide-up relative">
-        {/* Sound wave indicator — shows while playing */}
         {isPlaying && (
           <div className="absolute -left-12 sm:-left-16 top-1/2 -translate-y-1/2 flex items-end gap-1">
             <div className="w-1 bg-linear-to-t from-white/90 to-white/60 rounded-full animate-sound-wave-1 shadow-sm" />
@@ -223,7 +237,7 @@ export const SongHeader: React.FC<SongHeaderProps> = ({
         </p>
       </div>
 
-      {/* Progress bar + timestamps — shown below title when playing */}
+      {/* Progress bar + timestamps */}
       {isPlaying && (
         <div className="w-full max-w-md flex flex-col gap-3 animate-fade-in">
           <div className="flex justify-between text-xs text-white/50 font-work-sans font-medium">

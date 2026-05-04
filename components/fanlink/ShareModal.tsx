@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { trackEvent } from "@/lib/analytics";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -49,9 +50,7 @@ const SOCIAL_PLATFORMS = [
         <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
       </svg>
     ),
-    getUrl: (shareUrl: string) =>
-      // Instagram doesn't support direct share URLs — copy to clipboard fallback
-      shareUrl,
+    getUrl: (shareUrl: string) => shareUrl,
     isInstagram: true,
   },
   {
@@ -105,7 +104,13 @@ export function ShareModal({
   const shareUrl = `${SITE_URL}/${slug}`;
   const shareText = `Listen to "${releaseTitle}" by ${artistName}`;
 
-  // Close on Escape
+  // Shared event dimensions for this modal instance
+  const eventDimensions = {
+    release_slug: slug,
+    release_title: releaseTitle,
+    artist_name: artistName,
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -115,7 +120,6 @@ export function ShareModal({
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -132,17 +136,27 @@ export function ShareModal({
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      trackEvent("share_copy_link", {
+        ...eventDimensions,
+        share_url: shareUrl,
+      });
     } catch {
-      // fallback
+      // clipboard API unavailable — fail silently
     }
   }
 
   function handleSocialShare(platform: (typeof SOCIAL_PLATFORMS)[0]) {
+    trackEvent("share_social_click", {
+      ...eventDimensions,
+      platform: platform.key, // "whatsapp" | "twitter" | "instagram" | "facebook" | "snapchat"
+    });
+
     if (platform.isInstagram) {
-      // Instagram: copy link then prompt
+      // Instagram has no web share URL — copy link instead
       handleCopy();
       return;
     }
+
     const url = platform.getUrl(shareUrl, releaseTitle, artistName);
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -150,7 +164,6 @@ export function ShareModal({
   if (!isOpen) return null;
 
   return (
-    /* Overlay */
     <div
       ref={overlayRef}
       onClick={(e) => {
@@ -159,7 +172,6 @@ export function ShareModal({
       className="fixed inset-0 z-100 flex items-end sm:items-center justify-center"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
     >
-      {/* Modal */}
       <div
         className="relative w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl overflow-hidden"
         style={{ background: "#1a1a1a" }}
@@ -209,7 +221,6 @@ export function ShareModal({
             className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors"
             style={{ background: "#2a2a2a" }}
           >
-            {/* Link icon */}
             <div
               className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
               style={{ background: "#3a3a3a" }}
@@ -237,7 +248,6 @@ export function ShareModal({
               </p>
             </div>
 
-            {/* Copy icon */}
             <div className="shrink-0 text-gray-400">
               {copied ? (
                 <svg

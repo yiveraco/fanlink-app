@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Work_Sans, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/provider/providers";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -106,6 +107,7 @@ export default function RootLayout({
       >
         <Providers>{children}</Providers>
       </body>
+      <GoogleAnalytics />
     </html>
   );
 }

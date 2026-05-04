@@ -11,11 +11,6 @@ import { Footer } from "./Footer";
 import { ShareButton } from "./ShareButton";
 import { ShareModal } from "./ShareModal";
 
-// ============================================
-// STREAMING PLATFORMS
-// Ordered by global popularity — shown in this order on the page.
-// Each entry maps a release URL field to its display name and icon.
-// ============================================
 const STREAMING_PLATFORMS: {
   field: keyof Release;
   name: string;
@@ -114,9 +109,6 @@ const STREAMING_PLATFORMS: {
   },
 ];
 
-// ============================================
-// SOCIAL ICONS
-// ============================================
 const SOCIAL_ICONS: Record<string, JSX.Element> = {
   spotify: (
     <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
@@ -160,10 +152,6 @@ const SOCIAL_ICONS: Record<string, JSX.Element> = {
   ),
 };
 
-// ============================================
-// HELPERS
-// ============================================
-
 function getArtistProfile(tracks: Track[]): ArtistProfile | null {
   for (const track of tracks) {
     for (const ta of track.artists) {
@@ -173,14 +161,8 @@ function getArtistProfile(tracks: Track[]): ArtistProfile | null {
   return null;
 }
 
-/**
- * Build the streaming service list from the release's per-platform URL fields.
- * Only platforms with a non-empty URL are included, in priority order.
- * Falls back to the legacy `fanLink` field if no per-platform URLs exist.
- */
 function buildStreamingServices(release: Release): StreamingService[] {
   const services: StreamingService[] = [];
-
   for (const platform of STREAMING_PLATFORMS) {
     const url = release[platform.field];
     if (typeof url === "string" && url.trim()) {
@@ -192,9 +174,6 @@ function buildStreamingServices(release: Release): StreamingService[] {
       });
     }
   }
-
-  // Legacy fallback — if the backend hasn't yet returned per-platform URLs
-  // but has a single fanLink, show that instead
   if (services.length === 0 && release.fanLink) {
     services.push({
       name: "Listen Now",
@@ -203,13 +182,11 @@ function buildStreamingServices(release: Release): StreamingService[] {
       url: release.fanLink,
     });
   }
-
   return services;
 }
 
 function buildSocialLinks(profile: ArtistProfile | null): SocialLink[] {
   if (!profile) return [];
-
   const candidates: {
     field: keyof ArtistProfile;
     iconKey: string;
@@ -224,7 +201,6 @@ function buildSocialLinks(profile: ArtistProfile | null): SocialLink[] {
     { field: "facebook", iconKey: "facebook", label: "Facebook" },
     { field: "soundCloud", iconKey: "soundCloud", label: "SoundCloud" },
   ];
-
   return candidates.reduce<SocialLink[]>((acc, { field, iconKey, label }) => {
     const href = profile[field];
     if (typeof href === "string" && href.trim() && SOCIAL_ICONS[iconKey]) {
@@ -233,10 +209,6 @@ function buildSocialLinks(profile: ArtistProfile | null): SocialLink[] {
     return acc;
   }, []);
 }
-
-// ============================================
-// COMPONENT
-// ============================================
 
 interface FanLinkClientProps {
   release: Release;
@@ -254,7 +226,7 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
   const streamingServices = buildStreamingServices(release);
   const socialLinks = buildSocialLinks(profile);
   const [shareOpen, setShareOpen] = useState(false);
-  const slug = release.slug ?? release.id; // fanlink slug for the share URL
+  const slug = release.slug ?? release.id;
 
   return (
     <div className="relative w-full min-h-screen overflow-x-hidden bg-[#0a0a0a]">
@@ -287,16 +259,28 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
           artist={artistName}
           coverImage={release.coverArt}
           audioSnippetUrl={audioSnippetUrl}
+          releaseSlug={slug}
+          artistName={artistName}
         />
 
         {streamingServices.length > 0 && (
-          <StreamingServices services={streamingServices} />
+          <StreamingServices
+            services={streamingServices}
+            releaseTitle={release.releaseTitle}
+            artistName={artistName}
+            releaseSlug={slug}
+          />
         )}
 
         <Footer artistName={artistName} socialLinks={socialLinks} />
       </main>
 
-      <ShareButton onClick={() => setShareOpen(true)} />
+      <ShareButton
+        onClick={() => setShareOpen(true)}
+        releaseTitle={release.releaseTitle}
+        artistName={artistName}
+        releaseSlug={slug}
+      />
 
       <ShareModal
         isOpen={shareOpen}
