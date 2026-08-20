@@ -10,6 +10,7 @@ import { StreamingServices } from "./StreamingLinks";
 import { Footer } from "./Footer";
 import { ShareButton } from "./ShareButton";
 import { ShareModal } from "./ShareModal";
+import { NotLiveYet } from "./NotLiveYet";
 
 const STREAMING_PLATFORMS: {
   field: keyof Release;
@@ -217,7 +218,12 @@ interface FanLinkClientProps {
 
 export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
   const previewTrack = tracks[0];
-  const audioSnippetUrl = previewTrack?.mp3 ?? previewTrack?.wav ?? "";
+  // Prefer the pre-cut short preview clip. Only fall back to the full
+  // track when there's no shortWav — SongHeader will clip that to 30s.
+  const hasShortPreview = Boolean(previewTrack?.shortWav?.trim());
+  const audioSnippetUrl = hasShortPreview
+    ? previewTrack!.shortWav!.trim()
+    : (previewTrack?.mp3 ?? previewTrack?.wav ?? "");
 
   const profile = getArtistProfile(tracks);
   const artistName =
@@ -253,7 +259,7 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
       </div>
 
       {/* Content */}
-      <main className="relative z-10 flex flex-col items-center gap-8 sm:gap-10 md:gap-12 px-4 sm:px-6 py-8 sm:py-12 md:py-16 mx-auto max-w-[95%] sm:max-w-[600px] min-h-screen">
+      <main className="relative z-10 flex flex-col items-center gap-8 sm:gap-10 md:gap-12 px-4 sm:px-6 py-8 sm:py-12 md:py-16 mx-auto max-w-[95%] sm:max-w-150 min-h-screen">
         <SongHeader
           title={release.releaseTitle}
           artist={artistName}
@@ -261,14 +267,23 @@ export function FanLinkClient({ release, tracks }: FanLinkClientProps) {
           audioSnippetUrl={audioSnippetUrl}
           releaseSlug={slug}
           artistName={artistName}
+          isFullTrack={!hasShortPreview}
+          sampleStartTime={previewTrack?.sampleStartTime}
+          sampleEndTime={previewTrack?.sampleEndTime}
         />
 
-        {streamingServices.length > 0 && (
+        {streamingServices.length > 0 ? (
           <StreamingServices
             services={streamingServices}
             releaseTitle={release.releaseTitle}
             artistName={artistName}
             releaseSlug={slug}
+          />
+        ) : (
+          <NotLiveYet
+            releaseTitle={release.releaseTitle}
+            releaseDate={release.releaseDate}
+            status={release.status}
           />
         )}
 

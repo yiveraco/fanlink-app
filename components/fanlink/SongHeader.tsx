@@ -8,10 +8,30 @@ import { Pause, Play } from "lucide-react";
 import { SongHeaderProps } from "@/types";
 import { trackEvent } from "@/lib/analytics";
 
-// Extended props to carry release context for analytics
+const PREVIEW_SECONDS = 30;
+
+/** Parse "90", "1:30", or "00:01:30" into seconds. */
+function parseTimeToSeconds(value?: string | null): number {
+  if (!value) return 0;
+  const trimmed = String(value).trim();
+  if (!trimmed) return 0;
+  if (!trimmed.includes(":")) {
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return trimmed.split(":").reduce((acc, part) => {
+    const n = Number(part);
+    return Number.isFinite(n) ? acc * 60 + n : acc * 60;
+  }, 0);
+}
+
 interface ExtendedSongHeaderProps extends SongHeaderProps {
   releaseSlug?: string;
   artistName?: string;
+  /** true when audioSnippetUrl is the full track and must be clipped to 30s */
+  isFullTrack?: boolean;
+  sampleStartTime?: string | null;
+  sampleEndTime?: string | null;
 }
 
 export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
@@ -21,16 +41,22 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
   audioSnippetUrl,
   releaseSlug,
   artistName,
+  isFullTrack = false,
+  sampleStartTime,
+  sampleEndTime,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0); // length of the preview window
+  const [currentTime, setCurrentTime] = useState(0); // position within the window
   const [audioError, setAudioError] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
 
-  // Shared event dimensions
+  // Window bounds. startAt is 0 for a shortWav clip.
+  const startAt = isFullTrack ? parseTimeToSeconds(sampleStartTime) : 0;
+  const endAtRef = useRef<number>(Infinity);
+
   const eventDimensions = {
     release_title: title,
     artist_name: artistName ?? artist,
@@ -41,15 +67,30 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
 
+    const computeEnd = (audioDuration: number) => {
+      const total = Number.isFinite(audioDuration) ? audioDuration : Infinity;
+      if (!isFullTrack) return total;
+      const explicitEnd = parseTimeToSeconds(sampleEndTime);
+      const cap = startAt + PREVIEW_SECONDS;
+      const end = explicitEnd > startAt ? Math.min(explicitEnd, cap) : cap;
+      return Math.min(end, total);
+    };
+
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
+      const end = computeEnd(audio.duration);
+      endAtRef.current = end;
+      setDuration(Math.max(0, end - startAt));
       setAudioError(false);
+      if (startAt > 0 && audio.currentTime < startAt) {
+        audio.currentTime = startAt;
+      }
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
       setProgress(0);
       setCurrentTime(0);
+      audio.currentTime = startAt;
     };
 
     const handleError = () => {
@@ -59,7 +100,9 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
 
     const handleCanPlay = () => {
       if (audio.duration && duration === 0) {
-        setDuration(audio.duration);
+        const end = computeEnd(audio.duration);
+        endAtRef.current = end;
+        setDuration(Math.max(0, end - startAt));
       }
     };
 
@@ -68,8 +111,8 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
-    if (audio.duration && !isNaN(audio.duration)) {
-      setDuration(audio.duration);
+    if (audio.duration && !Number.isNaN(audio.duration)) {
+      handleLoadedMetadata();
     }
 
     return () => {
@@ -79,14 +122,28 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
       audio.removeEventListener("error", handleError);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [duration]);
+  }, [audioSnippetUrl, isFullTrack, sampleEndTime, startAt, duration]);
 
   useEffect(() => {
     const updateProgress = () => {
       const audio = audioRef.current;
-      if (audio && audio.duration) {
-        setProgress((audio.currentTime / audio.duration) * 100);
-        setCurrentTime(audio.currentTime);
+      if (audio) {
+        const end = endAtRef.current;
+
+        // Hard stop at the end of the preview window.
+        if (audio.currentTime >= end) {
+          audio.pause();
+          audio.currentTime = startAt;
+          setIsPlaying(false);
+          setProgress(0);
+          setCurrentTime(0);
+          return;
+        }
+
+        const windowDur = Math.max(0, end - startAt);
+        const rel = Math.max(0, audio.currentTime - startAt);
+        setCurrentTime(rel);
+        setProgress(windowDur > 0 ? (rel / windowDur) * 100 : 0);
       }
       if (isPlaying) {
         animationRef.current = requestAnimationFrame(updateProgress);
@@ -100,7 +157,7 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, startAt]);
 
   const togglePlayPause = async () => {
     const audio = audioRef.current;
@@ -112,6 +169,13 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
         setIsPlaying(false);
         trackEvent("audio_preview_pause", eventDimensions);
       } else {
+        // If we're outside the window (fresh start or after a stop), reset.
+        if (
+          audio.currentTime < startAt ||
+          audio.currentTime >= endAtRef.current
+        ) {
+          audio.currentTime = startAt;
+        }
         await audio.play();
         setIsPlaying(true);
         trackEvent("audio_preview_play", eventDimensions);
@@ -124,20 +188,21 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
-    if (!audio || !audio.duration) return;
+    if (!audio) return;
 
     const bounds = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - bounds.left;
-    const percentage = x / bounds.width;
-    const newTime = percentage * audio.duration;
+    const percentage = Math.min(1, Math.max(0, x / bounds.width));
+    const windowDur = Math.max(0, endAtRef.current - startAt);
+    const newTime = startAt + percentage * windowDur;
 
     audio.currentTime = newTime;
     setProgress(percentage * 100);
-    setCurrentTime(newTime);
+    setCurrentTime(percentage * windowDur);
   };
 
   const formatTime = (time: number): string => {
-    if (isNaN(time)) return "0:00";
+    if (Number.isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -145,17 +210,13 @@ export const SongHeader: React.FC<ExtendedSongHeaderProps> = ({
 
   return (
     <header className="flex flex-col items-center gap-4 sm:gap-6 w-full animate-fade-in">
-      <audio ref={audioRef} preload="metadata">
-        <source src={audioSnippetUrl} type="audio/mpeg" />
-        <source
-          src={audioSnippetUrl.replace(".mp3", ".ogg")}
-          type="audio/ogg"
-        />
+      {/* Direct src lets the browser sniff wav vs mp3 — no wrong type hint */}
+      <audio ref={audioRef} src={audioSnippetUrl} preload="metadata">
         Your browser does not support the audio element.
       </audio>
 
       {/* Artwork */}
-      <div className="relative w-full aspect-square max-w-full sm:max-w-[600px] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl group">
+      <div className="relative w-full aspect-square max-w-full sm:max-w-150 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl group">
         <Image
           src={coverImage}
           alt={`${title} by ${artist}`}
