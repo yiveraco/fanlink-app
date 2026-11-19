@@ -27,7 +27,7 @@ async function fetchRelease(
   try {
     const res = await fetch(url, {
       headers: getApiHeaders(),
-      next: { revalidate: 600 },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
