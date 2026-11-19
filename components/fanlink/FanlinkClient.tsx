@@ -49,6 +49,12 @@ const STREAMING_PLATFORMS: {
     icon: "/boomplay.png",
   },
   {
+    field: "audiomackUrl",
+    name: "Audiomack",
+    subtitle: "Stream on Audiomack",
+    icon: "/audiomack.png",
+  },
+  {
     field: "deezerUrl",
     name: "Deezer",
     subtitle: "Listen on Deezer",

@@ -130,6 +130,7 @@ export interface Release {
   deezerUrl: string | null;
   tidalUrl: string | null;
   boomplayUrl: string | null;
+  audiomackUrl: string | null;
   pandoraUrl: string | null;
   soundcloudUrl: string | null;
   bandcampUrl: string | null;
